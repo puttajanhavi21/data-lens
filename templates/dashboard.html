@@ -1,0 +1,776 @@
+{% extends "base.html" %}
+{% block title %}
+  Workspace
+{% endblock %}
+{% macro number(value) -%}
+  {% if value is not none %}
+    {{ '%.4g'|format(value) }}
+  {% else %}
+    <span class="muted">
+      —
+    </span>
+  {% endif %}
+{%- endmacro %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">
+        YOUR WORKSPACE
+      </p>
+      <h1>
+        A closer look.
+      </h1>
+      <p class="dataset-subtitle">
+        <span class="dataset-dot">
+        </span>
+        <strong>
+          {{ dataset.name }}
+        </strong>
+        <span>
+          {{ '{:,}'.format(profile.rows) }} rows · {{ profile.columns }} columns
+        </span>
+      </p>
+    </div>
+    <a class="button button-secondary" href="{{ url_for('download') }}">
+      Download current CSV
+      <span aria-hidden="true">
+        ↓
+      </span>
+    </a>
+  </div>
+  <nav class="section-nav" aria-label="Workspace sections">
+    <a href="#profile">
+      01 / Profile
+    </a>
+    <a href="#prepare">
+      02 / Prepare
+    </a>
+    <a href="#explore">
+      03 / Explore
+    </a>
+    <a href="#model">
+      04 / Model
+    </a>
+    <a href="#insights">
+      05 / Explain
+    </a>
+  </nav>
+  <section id="profile" class="section">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">
+          01 / THE STARTING POINT
+        </p>
+        <h2>
+          Meet your dataset.
+        </h2>
+      </div>
+      <span class="pill {% if cleaning_applied %}pill-orange{% endif %}">
+        {% if cleaning_applied %}
+          PREPARED VIEW
+        {% else %}
+          ORIGINAL DATA
+        {% endif %}
+      </span>
+    </div>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <span class="metric-label">
+          Rows to explore
+        </span>
+        <strong>
+          {{ '{:,}'.format(profile.rows) }}
+        </strong>
+        <small>
+          Observations in this view
+        </small>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">
+          Columns
+        </span>
+        <strong>
+          {{ profile.columns }}
+        </strong>
+        <small>
+          {{ profile.numeric_count }} numeric · {{ profile.categorical_count }} other
+        </small>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">
+          Missing values
+        </span>
+        <strong>
+          {{ '{:,}'.format(profile.missing_cells) }}
+          <span>
+            {{ '%.1f'|format(profile.missing_percent) }}%
+          </span>
+        </strong>
+        <small>
+          Empty cells across all columns
+        </small>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">
+          Duplicate rows
+        </span>
+        <strong>
+          {{ '{:,}'.format(profile.duplicates) }}
+        </strong>
+        <small>
+          Repeated rows after the first copy
+        </small>
+      </div>
+    </div>
+    <div class="panel table-panel">
+      <div class="panel-heading">
+        <h3>
+          A peek inside
+        </h3>
+        <span class="muted">
+          First rows · scroll to see every column
+        </span>
+      </div>
+      <div class="table-scroll" tabindex="0" aria-label="Data preview">
+        {{ preview|safe }}
+      </div>
+    </div>
+    <details class="panel column-details">
+      <summary>
+        Column-by-column statistics
+        <span>
+          {{ profile.columns }} columns
+        </span>
+      </summary>
+      <div class="table-scroll" tabindex="0" aria-label="Column statistics">
+        <table>
+          <thead>
+            <tr>
+              <th>
+                Column
+              </th>
+              <th>
+                Type
+              </th>
+              <th>
+                Missing
+              </th>
+              <th>
+                Unique
+              </th>
+              <th>
+                Mean
+              </th>
+              <th>
+                Median
+              </th>
+              <th>
+                Std. dev.
+              </th>
+              <th>
+                Min
+              </th>
+              <th>
+                Max
+              </th>
+              <th>
+                Outliers
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for column in profile.column_stats %}
+              <tr>
+                <th scope="row">
+                  {{ column.name }}
+                </th>
+                <td>
+                  <code>
+                    {{ column.dtype }}
+                  </code>
+                </td>
+                <td>
+                  {{ column.missing }}
+                </td>
+                <td>
+                  {{ column.unique }}
+                </td>
+                <td>
+                  {{ number(column.mean) }}
+                </td>
+                <td>
+                  {{ number(column.median) }}
+                </td>
+                <td>
+                  {{ number(column.std) }}
+                </td>
+                <td>
+                  {{ number(column.min) }}
+                </td>
+                <td>
+                  {{ number(column.max) }}
+                </td>
+                <td>
+                  {{ number(column.outliers) }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="table-note">
+        Outliers are values beyond 1.5 × the interquartile range. They are a prompt to investigate, not automatically an error. A dash means the statistic does not apply.
+      </p>
+    </details>
+  </section>
+
+  <section id="prepare" class="section">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">
+          02 / A CLEANER VIEW
+        </p>
+        <h2>
+          Get your data ready.
+        </h2>
+      </div>
+    </div>
+    <div class="panel preparation-panel">
+      <div class="preparation-description">
+        <h3>
+          Small changes. Clearer patterns.
+        </h3>
+        <p>
+          Prepare the data used in your preview, charts, explanations, and CSV download. Each preparation starts from the original upload.
+        </p>
+        <p class="small-text">
+          Models always start from the original upload and learn missing-value replacements from training data only.
+        </p>
+        {% if cleaning_note %}
+          <div class="inline-note">
+            {{ cleaning_note }}
+          </div>
+        {% endif %}
+      </div>
+      <div class="preparation-controls">
+        <form action="{{ url_for('clean') }}" method="post" class="form-stack" data-busy="Preparing data…">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label for="missing-strategy">
+            Missing values
+          </label>
+          <select id="missing-strategy" name="missing_strategy">
+            <option value="leave">
+              Leave them as they are
+            </option>
+            <option value="fill">
+              Fill with median / most common value
+            </option>
+            <option value="drop">
+              Drop rows with missing values
+            </option>
+          </select>
+          <label class="checkbox-label">
+            <input type="checkbox" name="remove_duplicates" value="on">
+            <span>
+              Remove duplicate rows
+            </span>
+          </label>
+          <button class="button button-dark" type="submit">
+            Apply preparation
+          </button>
+        </form>
+        <form action="{{ url_for('reset') }}" method="post" class="reset-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="text-button" type="submit">
+            Restore the original data
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section id="explore" class="section">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">
+          03 / LOOK FOR THE PATTERNS
+        </p>
+        <h2>
+          Let the data tell its story.
+        </h2>
+      </div>
+      {% if numeric_columns %}
+        <form action="{{ url_for('dashboard') }}" method="get" class="inline-form">
+          <label for="chart-column">
+            Distribution of
+          </label>
+          <select id="chart-column" name="column">
+            {% for column in numeric_columns %}
+              <option value="{{ column }}" {% if column == selected_column %}selected{% endif %}>
+                {{ column }}
+              </option>
+            {% endfor %}
+          </select>
+          <button class="button button-secondary button-small" type="submit">
+            View
+          </button>
+        </form>
+      {% endif %}
+    </div>
+    {% if charts %}
+      <div class="chart-grid">
+        {% for chart in charts %}
+          <figure class="panel chart-panel">
+            <figcaption>
+              {{ chart.title }}
+            </figcaption>
+            <img src="data:image/png;base64,{{ chart.image }}" alt="{{ chart.title }} for {{ dataset.name }}">
+          </figure>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state panel">
+        <span class="empty-icon" aria-hidden="true">
+          ▥
+        </span>
+        <h3>
+          No charts to show yet.
+        </h3>
+        <p>
+          This view needs more usable data. Try another column or a sample dataset.
+        </p>
+      </div>
+    {% endif %}
+    <details class="learning-note">
+      <summary>
+        How do I read these charts?
+      </summary>
+      <div>
+        <p>
+          A
+          <strong>
+            distribution
+          </strong>
+          shows how often values fall into different ranges. A
+          <strong>
+            correlation
+          </strong>
+          close to +1 or −1 suggests a strong linear relationship between numeric columns; correlation alone does not show cause and effect. A
+          <strong>
+            missing-values chart
+          </strong>
+          highlights columns that may need attention.
+        </p>
+      </div>
+    </details>
+  </section>
+
+  <section id="model" class="section">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">
+          04 / FIND THE SIGNAL
+        </p>
+        <h2>
+          Build a baseline model.
+        </h2>
+      </div>
+      <span class="pill">
+        REPRODUCIBLE RESULTS
+      </span>
+    </div>
+    <div class="model-grid">
+      <form action="{{ url_for('train') }}" method="post" class="panel model-form form-stack" data-busy="Training your model…" id="model-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h3>
+          Choose your question
+        </h3>
+        <label for="task">
+          What would you like to do?
+        </label>
+        <select name="task" id="task">
+          <option value="classification" {% if last_run and last_run.task == 'classification' %}selected{% endif %}>
+            Classification — predict a category
+          </option>
+          <option value="regression" {% if last_run and last_run.task == 'regression' %}selected{% endif %}>
+            Regression — predict a number
+          </option>
+          <option value="clustering" {% if last_run and last_run.task == 'clustering' %}selected{% endif %}>
+            Clustering — discover groups
+          </option>
+        </select>
+        <div data-supervised>
+          <label for="target">
+            Target column
+          </label>
+          <select name="target" id="target">
+            <option value="">
+              Choose what to predict
+            </option>
+            {% for feature in feature_options %}
+              <option value="{{ feature.name }}" {% if last_run and last_run.target == feature.name %}selected{% endif %}>
+                {{ feature.name }}
+              </option>
+            {% endfor %}
+          </select>
+          <small>
+            The target is excluded from the input features automatically. Clustering does not need a target.
+          </small>
+        </div>
+        <fieldset class="feature-fieldset">
+          <legend>
+            Input features
+          </legend>
+          <p class="field-hint">
+            Select up to 30 useful columns. Leave out IDs and anything that reveals the answer. Clustering uses numeric features only.
+          </p>
+          <div class="feature-list">
+            {% for feature in feature_options %}
+              <label class="checkbox-label">
+                <input type="checkbox" name="features" value="{{ feature.name }}" {% if feature.selected %}checked{% endif %}>
+                <span>
+                  {{ feature.name }}
+                  <small>
+                    {{ feature.kind }}
+                  </small>
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <div data-supervised>
+          <label for="test-size">
+            Hold out for evaluation
+          </label>
+          <select id="test-size" name="test_size">
+            <option value="0.2">
+              20% of rows
+            </option>
+            <option value="0.3">
+              30% of rows
+            </option>
+          </select>
+          <small>
+            The model never trains on these evaluation rows.
+          </small>
+        </div>
+        <div data-clustering>
+          <label for="n-clusters">
+            Number of clusters
+          </label>
+          <input id="n-clusters" type="number" name="n_clusters" min="2" max="8" value="3">
+          <small>
+            Used only for clustering. Choose between 2 and 8 groups.
+          </small>
+        </div>
+        <button type="submit" class="button button-dark">
+          Train model
+          <span aria-hidden="true">
+            ↗
+          </span>
+        </button>
+        <small>
+          Training uses the original dataset, including when the preview has been prepared.
+        </small>
+      </form>
+      <div class="model-results">
+        {% if last_run %}
+          <div class="panel results-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="eyebrow">
+                  LATEST RESULT
+                </span>
+                <h3>
+                  {{ last_run.algorithm }}
+                </h3>
+              </div>
+              <span class="pill pill-green">
+                {{ last_run.task|capitalize }}
+              </span>
+            </div>
+            <p class="result-context">
+              {% if last_run.target %}
+                Predicting
+                <strong>
+                  {{ last_run.target }}
+                </strong>
+                ·
+              {% endif %}
+              {{ last_run.features|length }} input features · {{ '%.2f'|format(last_run.elapsed_seconds) }}s
+            </p>
+            <div class="result-metrics">
+              {% for label, value in last_run.metrics.items() %}
+                <div>
+                  <span>
+                    {{ label|replace('_', ' ')|capitalize }}
+                  </span>
+                  <strong>
+                    {% if value is not none %}
+                      {{ '%.4g'|format(value) }}
+                    {% else %}
+                      <span class="unavailable">
+                        Unavailable
+                      </span>
+                    {% endif %}
+                  </strong>
+                </div>
+              {% endfor %}
+            </div>
+            <div class="split-caption">
+              {% if last_run.task == 'clustering' %}
+                {{ '{:,}'.format(last_run.row_count) }} rows used for clustering
+              {% else %}
+                {{ '{:,}'.format(last_run.train_rows) }} training rows
+                <span>
+                  ·
+                </span>
+                {{ '{:,}'.format(last_run.test_rows) }} evaluation rows
+              {% endif %}
+            </div>
+            {% if last_run.notes %}
+              <ul class="result-notes">
+                {% for note in last_run.notes %}
+                  <li>
+                    {{ note }}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if last_run.details.confusion_matrix %}
+              {% set matrix = last_run.details.confusion_matrix %}
+              <div class="result-detail">
+                <h4>
+                  Confusion matrix
+                </h4>
+                <p class="small-text">
+                  Rows are actual labels; columns are predicted labels.
+                </p>
+                <div class="table-scroll" tabindex="0">
+                  <table class="matrix-table">
+                    <thead>
+                      <tr>
+                        <th>
+                          Actual / Predicted
+                        </th>
+                        {% for label in matrix.labels %}
+                          <th>
+                            {{ label }}
+                          </th>
+                        {% endfor %}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for row in matrix['values'] %}
+                        <tr>
+                          <th scope="row">
+                            {{ matrix.labels[loop.index0] }}
+                          </th>
+                          {% for count in row %}
+                            <td>
+                              {{ count }}
+                            </td>
+                          {% endfor %}
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            {% endif %}
+            {% if last_run.details.cluster_sizes %}
+              <div class="result-detail">
+                <h4>
+                  How the groups are distributed
+                </h4>
+                <div class="cluster-list">
+                  {% for label, count in last_run.details.cluster_sizes.items() %}
+                    <div>
+                      <span>
+                        Cluster {{ label }}
+                      </span>
+                      <strong>
+                        {{ count }} rows
+                      </strong>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+            <a class="text-link" href="{{ url_for('history') }}">
+              See all runs
+              <span aria-hidden="true">
+                →
+              </span>
+            </a>
+          </div>
+        {% else %}
+          <div class="panel results-empty">
+            <div class="results-graphic" aria-hidden="true">
+              <span>
+              </span>
+              <span>
+              </span>
+              <span>
+              </span>
+              <span>
+              </span>
+              <span>
+              </span>
+            </div>
+            <p class="eyebrow">
+              ROOM FOR DISCOVERY
+            </p>
+            <h3>
+              Your first result is
+              <br>
+              one experiment away.
+            </h3>
+            <p>
+              Choose a task, select your input columns, and train a model. Its evaluation results will appear here.
+            </p>
+            <div class="results-empty-note">
+              <strong>
+                A useful starting point
+              </strong>
+              <span>
+                Baseline models are deliberately simple. Start here, understand the result, then try a different set of features.
+              </span>
+            </div>
+          </div>
+        {% endif %}
+        <details class="learning-note">
+          <summary>
+            What do these model scores mean?
+          </summary>
+          <div>
+            <p>
+              <strong>
+                Classification:
+              </strong>
+              accuracy is the fraction of correct predictions. Precision measures how often a predicted class is correct; recall measures how many true cases the model finds. F1 balances precision and recall.
+            </p>
+            <p>
+              <strong>
+                Regression:
+              </strong>
+              MAE and RMSE measure prediction errors in the target’s units; smaller is better. R² compares the model to predicting the average and can be negative.
+            </p>
+            <p>
+              <strong>
+                Clustering:
+              </strong>
+              silhouette score ranges from −1 to 1. Higher values suggest better separated groups. Inertia summarizes distances to cluster centers and usually decreases when you add more clusters.
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section id="insights" class="section">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">
+          05 / CONNECT THE DOTS
+        </p>
+        <h2>
+          Insights, in plain language.
+        </h2>
+      </div>
+      <span class="sparkle" aria-hidden="true">
+        ✦
+      </span>
+    </div>
+    <div class="panel insights-panel">
+      <div class="insights-copy">
+        <h3>
+          Understand what you’re seeing.
+        </h3>
+        <p>
+          Get a clear explanation of this dataset and your latest model result.
+        </p>
+        <form action="{{ url_for('explain') }}" method="post" class="form-stack" data-busy="Preparing your explanation…">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label for="explanation-mode">
+            Explanation source
+          </label>
+          <select id="explanation-mode" name="mode">
+            <option value="local">
+              Local summary — rule-based, no AI
+            </option>
+            <option value="ai" {% if not ai_configured %}disabled{% endif %}>
+              Generative AI — optional connection
+              {% if not ai_configured %}
+                (not configured)
+              {% endif %}
+            </option>
+          </select>
+          <label for="question">
+            A question to focus on
+            <span class="optional">
+              optional · AI mode
+            </span>
+          </label>
+          <textarea id="question" name="question" rows="3" maxlength="500" placeholder="For example: What should I investigate before using this model?">
+          </textarea>
+          <label class="checkbox-label consent-label">
+            <input type="checkbox" name="consent" value="on">
+            <span>
+              I agree to send column names, summary statistics, model metrics, and my question to the AI provider. Raw data rows are not sent.
+            </span>
+          </label>
+          <small>
+            Consent is required only for generative AI.
+            {% if not ai_configured %}
+              To enable AI, set OPENAI_API_KEY and OPENAI_MODEL in the project’s local configuration; see the README.
+            {% else %}
+              AI requests may have a cost with your provider.
+            {% endif %}
+          </small>
+          <button class="button button-dark" type="submit">
+            Explain my results
+            <span aria-hidden="true">
+              ✦
+            </span>
+          </button>
+        </form>
+      </div>
+      <div class="explanation-output">
+        <span class="eyebrow">
+          THE TAKEAWAY
+        </span>
+        {% if insight %}
+          <div class="explanation-source">
+            {% if insight.mode == 'ai' %}
+              Generative AI explanation
+            {% else %}
+              Local, rule-based explanation
+            {% endif %}
+          </div>
+          {% if insight.warning %}
+            <p class="inline-note">
+              {{ insight.warning }}
+            </p>
+          {% endif %}
+          <div class="explanation-text">{{ insight.text }}</div>
+        {% else %}
+          <h3>
+            Turn numbers into
+            <br>
+            a next step.
+          </h3>
+          <p>
+            Generate a local summary now, or connect an AI provider for an explanation tailored to your question.
+          </p>
+          <span class="subtle-rule">
+          </span>
+          <p class="small-text">
+            Local summaries work without a network connection or API key.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+{% endblock %}

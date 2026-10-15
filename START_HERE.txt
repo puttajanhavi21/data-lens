@@ -1,0 +1,27 @@
+DATA LENS - START HERE
+
+1. Open the project folder.
+2. Read README.md for installation and the workflow.
+3. Use Python 3.12 if you are choosing a version (the tested version).
+4. Open a terminal in this folder, where app.py is located.
+
+On Windows, run these three commands one at a time:
+
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe app.py
+
+Then open http://127.0.0.1:5000 in your browser.
+Keep the terminal running. Press Ctrl+C in it to stop the app.
+
+Start with the classification sample. Its target column is churn.
+For the regression sample, use price. Clustering has no target.
+
+OPTIONAL AI
+
+The core project runs without an API key. Local explanations use rules.
+Real generative AI needs your own OpenAI API key and model configuration.
+Follow the optional AI section in README.md. API usage may cost money.
+
+The ZIP includes source code and sample data, not Python or installed libraries.
+Internet access is needed for the first installation of requirements.

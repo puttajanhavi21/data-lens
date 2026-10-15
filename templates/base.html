@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#163e3b">
+  <title>{% block title %}Data Lens{% endblock %} · Data Lens</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" href="{{ url_for('index') }}" aria-label="Data Lens home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>Data Lens<span class="brand-caption">Make sense of your data.</span></span>
+    </a>
+    <div class="nav-label">NAVIGATION</div>
+    <nav class="main-nav">
+      <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}" {% if request.endpoint == 'index' %}aria-current="page"{% endif %}><span aria-hidden="true">⌂</span> Overview</a>
+      {% if current_dataset %}
+      <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}" {% if request.endpoint == 'dashboard' %}aria-current="page"{% endif %}><span aria-hidden="true">▤</span> Workspace</a>
+      {% else %}
+      <span class="nav-disabled"><span aria-hidden="true">▤</span> Workspace <small>Upload first</small></span>
+      {% endif %}
+      <a href="{{ url_for('history') }}" class="{% if request.endpoint == 'history' %}active{% endif %}" {% if request.endpoint == 'history' %}aria-current="page"{% endif %}><span aria-hidden="true">◷</span> Run history</a>
+    </nav>
+    {% if current_dataset %}
+    <div class="sidebar-dataset">
+      <span class="nav-label">CURRENT DATASET</span>
+      <strong title="{{ current_dataset.name }}">{{ current_dataset.name }}</strong>
+      <span>{{ '{:,}'.format(current_dataset.row_count) }} rows · {{ current_dataset.column_count }} columns</span>
+      <a href="{{ url_for('index') }}#upload">Change dataset <span aria-hidden="true">↗</span></a>
+    </div>
+    {% endif %}
+    <div class="sidebar-bottom">
+      <p>Explore your data.<br>Make better decisions.</p>
+      <small>DATA LENS</small>
+    </div>
+  </aside>
+
+  <div class="page-shell">
+    <header class="topbar">
+      <span>YOUR DATA, IN FOCUS</span>
+      <span class="topbar-tag">Profile · prepare · model</span>
+    </header>
+    <main id="main" class="main-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-stack" aria-live="polite">
+          {% for category, message in messages %}
+          <div class="flash flash-{{ category }}" role="{% if category == 'error' %}alert{% else %}status{% endif %}">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="page-footer"><span>Data Lens</span><span>From raw data to a clearer picture.</span></footer>
+  </div>
+</body>
+</html>

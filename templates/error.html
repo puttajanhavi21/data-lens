@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}
+  Let’s try that again
+{% endblock %}
+{% block content %}
+  <section class="panel empty-state error-state">
+    <p class="eyebrow">
+      {{ code }} / A SMALL DETOUR
+    </p>
+    <h1>
+      Let’s try that again.
+    </h1>
+    <p>
+      {{ message }}
+    </p>
+    <a class="button button-dark" href="{{ url_for('index') }}">
+      Back to overview
+      <span aria-hidden="true">
+        →
+      </span>
+    </a>
+  </section>
+
+{% endblock %}

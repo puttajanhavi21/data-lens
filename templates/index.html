@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow"><span class="tiny-dot"></span> LESS GUESSWORK. MORE UNDERSTANDING.</p>
+    <h1>A fresh perspective<br>on your data.</h1>
+    <p class="hero-description">Explore a spreadsheet, prepare the data, and evaluate a machine learning model in one workspace.</p>
+    <a class="button button-dark" href="#upload">Start exploring <span aria-hidden="true">↗</span></a>
+    <span class="hero-footnote">CSV files · No account needed</span>
+  </div>
+  <div class="hero-illustration" aria-hidden="true">
+    <div class="illustration-orbit"></div>
+    <div class="illustration-card">
+      <div class="illustration-top"><span class="illustration-dots">● ● ●</span><span>THE BIG PICTURE</span></div>
+      <div class="illustration-title">Patterns, in focus.</div>
+      <div class="illustration-chart"><span style="--bar:35%"></span><span style="--bar:52%"></span><span style="--bar:43%"></span><span style="--bar:73%"></span><span style="--bar:61%"></span><span style="--bar:90%"></span><span style="--bar:80%"></span></div>
+      <div class="illustration-baseline"></div>
+      <div class="illustration-bottom"><span>EXPLORE</span><span>UNDERSTAND</span><span>BUILD</span></div>
+    </div>
+    <div class="floating-note"><span>✦</span> A little insight goes a long way.</div>
+  </div>
+</section>
+
+  <div class="workflow-strip" aria-label="Four steps in the workflow">
+  <div><span>01</span><strong>Bring your data</strong><small>Upload a CSV</small></div>
+  <div><span>02</span><strong>Look a little closer</strong><small>Profile & explore</small></div>
+  <div><span>03</span><strong>Find the signal</strong><small>Train & evaluate</small></div>
+  <div><span>04</span><strong>Make it make sense</strong><small>Explain the results</small></div>
+</div>
+
+<section id="upload" class="section upload-section">
+  <div class="section-heading"><div><p class="eyebrow">GET STARTED</p><h2>Bring a dataset into focus.</h2></div><span class="pill">CSV WORKSPACE</span></div>
+  <div class="upload-grid">
+    <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" class="panel upload-panel" data-busy="Opening your dataset…">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="upload-icon" aria-hidden="true">↥</div>
+      <h3>Bring a dataset of your own</h3>
+      <p>Choose a CSV with a header row. Numeric and text columns are both welcome.</p>
+      <label class="file-label" for="dataset-file">Choose your CSV file</label>
+      <input id="dataset-file" name="file" type="file" accept=".csv,text/csv" required>
+      <button class="button button-dark" type="submit">Open workspace <span aria-hidden="true">→</span></button>
+      <small>Your file stays on this computer. Optional AI explanations send only a statistical summary after your consent.</small>
+    </form>
+    <div class="sample-panel">
+      <p class="eyebrow">JUST LOOKING AROUND?</p>
+      <h3>Take a sample for a spin.</h3>
+      <p>Three sample datasets, ready to explore. Pick the kind of question you want to answer.</p>
+      {% for name, number, title, description in [('classification', '01', 'Predict a category', 'Classification · Learn to predict a label.'), ('regression', '02', 'Estimate a number', 'Regression · Find patterns in a numeric outcome.'), ('clustering', '03', 'Discover natural groups', 'Clustering · Explore similarities without a target.')] %}
+      <form action="{{ url_for('sample', name=name) }}" method="post" data-busy="Loading sample…">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="sample-button" type="submit"><span class="sample-number">{{ number }}</span><span><strong>{{ title }}</strong><small>{{ description }}</small></span><span class="sample-arrow" aria-hidden="true">↗</span></button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}
+  Run history
+{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">
+        YOUR EXPERIMENT NOTEBOOK
+      </p>
+      <h1>
+        Every run tells you something.
+      </h1>
+      <p>
+        Revisit your experiments and compare what changed.
+      </p>
+    </div>
+    {% if current_dataset %}
+      <a href="{{ url_for('dashboard') }}#model" class="button button-dark">
+        New experiment
+        <span aria-hidden="true">
+          ↗
+        </span>
+      </a>
+    {% endif %}
+  </div>
+  {% if runs %}
+    <div class="history-summary">
+      <span class="history-count">
+        {{ runs|length }}
+      </span>
+      <div>
+        <strong>
+          saved experiments
+        </strong>
+        <p>
+          Stored locally in SQLite, including scores and model settings.
+        </p>
+      </div>
+    </div>
+    {% if chart %}
+      <figure class="panel chart-panel history-chart">
+        <figcaption>
+          Experiment comparison
+        </figcaption>
+        <img src="data:image/png;base64,{{ chart }}" alt="Comparison of model metrics across saved runs">
+      </figure>
+    {% endif %}
+    <div class="history-list">
+      {% for run in runs %}
+        {% set result = run.result %}
+        <article class="panel history-card">
+          <div class="history-card-heading">
+            <div class="run-number">
+              {{ '%02d'|format(run.id) }}
+            </div>
+            <div>
+              <h2>
+                {{ result.algorithm }}
+              </h2>
+              <p>
+                {{ run.dataset_name }}
+                <span>
+                  ·
+                </span>
+                {{ run.created_at }} UTC
+              </p>
+            </div>
+            <span class="pill {% if result.task == 'clustering' %}pill-orange{% else %}pill-green{% endif %}">
+              {{ result.task|capitalize }}
+            </span>
+          </div>
+          <div class="history-card-body">
+            <div class="history-description">
+              <span class="metric-label">
+                {% if result.target %}
+                  Target
+                {% else %}
+                  Grouping
+                {% endif %}
+              </span>
+              <strong>
+                {{ result.target or 'Similar observations' }}
+              </strong>
+              <small>
+                {{ result.features|length }} features · {{ '{:,}'.format(result.row_count) }} rows · {{ '%.2f'|format(result.elapsed_seconds) }}s
+              </small>
+            </div>
+            <div class="history-metrics">
+              {% for label, value in result.metrics.items() %}
+                <div>
+                  <span>
+                    {{ label|replace('_', ' ')|capitalize }}
+                  </span>
+                  <strong>
+                    {% if value is not none %}
+                      {{ '%.4g'|format(value) }}
+                    {% else %}
+                      <span class="unavailable">
+                        Unavailable
+                      </span>
+                    {% endif %}
+                  </strong>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          <form class="history-reopen" action="{{ url_for('select_dataset', dataset_id=run.dataset_id) }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="text-button" type="submit">
+              Reopen this dataset
+              <span aria-hidden="true">
+                →
+              </span>
+            </button>
+          </form>
+          <details class="history-details">
+            <summary>
+              Experiment details
+            </summary>
+            <div>
+              <p>
+                <strong>
+                  Features:
+                </strong>
+                {{ result.features|join(', ') }}
+              </p>
+              {% if result.task != 'clustering' %}
+                <p>
+                  <strong>
+                    Data split:
+                  </strong>
+                  {{ result.train_rows }} training rows, {{ result.test_rows }} evaluation rows.
+                </p>
+              {% endif %}
+              {% if result.parameters %}
+                <p>
+                  <strong>
+                    Settings:
+                  </strong>
+                  {% for key, value in result.parameters.items() %}
+                    {{ key|replace('_', ' ') }} = {{ value }}
+                    {% if not loop.last %}
+                      ;
+                    {% endif %}
+                  {% endfor %}
+                </p>
+              {% endif %}
+              {% if result.notes %}
+                <ul>
+                  {% for note in result.notes %}
+                    <li>
+                      {{ note }}
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          </details>
+        </article>
+      {% endfor %}
+    </div>
+    <p class="history-footnote">
+      Compare scores for the same task, target, and dataset. A larger number is not better for every metric.
+    </p>
+  {% else %}
+    <div class="panel empty-state history-empty">
+      <span class="empty-icon" aria-hidden="true">
+        ◷
+      </span>
+      <p class="eyebrow">
+        A FRESH NOTEBOOK
+      </p>
+      <h2>
+        Your experiments start here.
+      </h2>
+      <p>
+        Train a model in your workspace and its settings and results will be saved automatically.
+      </p>
+      <a href="{% if current_dataset %}{{ url_for('dashboard') }}#model{% else %}{{ url_for('index') }}#upload{% endif %}" class="button button-dark">
+        {% if current_dataset %}
+          Train your first model
+        {% else %}
+          Choose a dataset
+        {% endif %}
+        <span aria-hidden="true">
+          →
+        </span>
+      </a>
+    </div>
+  {% endif %}
+{% endblock %}
